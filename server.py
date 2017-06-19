@@ -5,12 +5,17 @@ from pymongo import MongoClient
 from bson.json_util import dumps
 import httpagentparser
 import json
+import time
 
 users = set()
 
 @get('/')
 def index():
     return template('index')
+
+@get('/admin')
+def admin():
+    return template('admin')
 
 @get('/websocket', apply=[websocket])
 def chat(ws):
@@ -50,6 +55,20 @@ def chat(ws):
 
     users.remove(ws)
 
+@get('/ws_admin', apply=[websocket])
+def ws_admin(ws):
+    client = MongoClient()
+    db = client.test
+    while True:
+        msg = ws.receive()
+        if msg is not None:        
+            cur = db.socket_count.find_one()
+            data = json.loads(dumps(cur))
+            count = int(data['count'])
+            ws.send(str(count))
+        else:
+            break
+
 @get('/refresh')
 def refresh():
     client = MongoClient()
@@ -58,4 +77,4 @@ def refresh():
 
     return 'DB Refreshed'
 
-run(host='192.168.43.69', port=8080, server=GeventWebSocketServer)
+run(host='localhost', port=8080, server=GeventWebSocketServer)
